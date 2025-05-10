@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { useModalContext } from "@/app/context/QuickViewModalContext";
 import { AppDispatch, useAppSelector } from "@/redux/store";
@@ -19,6 +19,7 @@ const QuickViewModal = () => {
 
   // get the product data
   const product = useAppSelector((state) => state.quickViewReducer.value);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const [activePreview, setActivePreview] = useState(0);
 
@@ -42,24 +43,31 @@ const QuickViewModal = () => {
   };
 
   useEffect(() => {
-    // closing modal while clicking outside
-    function handleClickOutside(event) {
-      if (!event.target.closest(".modal-content")) {
+    function handleClickOutside(event: MouseEvent) {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         closeModal();
       }
     }
-
+  
     if (isModalOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
+  
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-
       setQuantity(1);
     };
   }, [isModalOpen, closeModal]);
 
+  useEffect(() => {
+    return () => {
+      setQuantity(1);
+      setActivePreview(0);
+    };
+  }, [isModalOpen]);
+  if (!product || !product.imgs?.thumbnails) {
+    return null;
+  }
   return (
     <div
       className={`${
@@ -67,7 +75,7 @@ const QuickViewModal = () => {
       } fixed top-0 left-0 overflow-y-auto no-scrollbar w-full h-screen sm:py-20 xl:py-25 2xl:py-[230px] bg-dark/70 sm:px-8 px-4 py-5`}
     >
       <div className="flex items-center justify-center ">
-        <div className="w-full max-w-[1100px] rounded-xl shadow-3 bg-white p-7.5 relative modal-content">
+        <div ref={modalRef} className="w-full max-w-[1100px] rounded-xl shadow-3 bg-white p-7.5 relative modal-content">
           <button
             onClick={() => closeModal()}
             aria-label="button for close modal"
@@ -94,7 +102,7 @@ const QuickViewModal = () => {
             <div className="max-w-[526px] w-full">
               <div className="flex gap-5">
                 <div className="flex flex-col gap-5">
-                  {product.imgs.thumbnails?.map((img, key) => (
+                  {product?.imgs?.thumbnails?.map((img, key) => (
                     <button
                       onClick={() => setActivePreview(key)}
                       key={key}
@@ -103,7 +111,7 @@ const QuickViewModal = () => {
                       }`}
                     >
                       <Image
-                        src={img || ""}
+                        src={img || null}
                         alt="thumbnail"
                         width={61}
                         height={61}
@@ -138,7 +146,7 @@ const QuickViewModal = () => {
                     </button>
 
                     <Image
-                      src={product?.imgs?.previews?.[activePreview]}
+                      src={product?.imgs?.thumbnails[activePreview] || "/public/images/products/image 156.png"}
                       alt="products-details"
                       width={400}
                       height={400}
